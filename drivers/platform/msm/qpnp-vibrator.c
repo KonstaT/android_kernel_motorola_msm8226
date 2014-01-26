@@ -47,6 +47,7 @@ struct qpnp_vib {
 	int state;
 	int vtg_level;
 	int timeout;
+	int boot_up_vibe;
 	struct mutex lock;
 };
 
@@ -260,6 +261,11 @@ static int __devinit qpnp_vibrator_probe(struct spmi_device *spmi)
 
 	vib->vtg_level /= 100;
 
+	rc = of_property_read_u32(spmi->dev.of_node,
+			"qcom,vib-boot-up-vibe-ms", &temp_val);
+	if (!rc)
+		vib->boot_up_vibe = temp_val;
+
 	vib_resource = spmi_get_resource(spmi, 0, IORESOURCE_MEM, 0);
 	if (!vib_resource) {
 		dev_err(&spmi->dev, "Unable to get vibrator base address\n");
@@ -295,6 +301,9 @@ static int __devinit qpnp_vibrator_probe(struct spmi_device *spmi)
 		return rc;
 
 	vib_dev = vib;
+
+	if (vib->boot_up_vibe)
+		qpnp_vib_enable(&vib->timed_dev, vib->boot_up_vibe);
 
 	return rc;
 }
