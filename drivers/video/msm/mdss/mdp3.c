@@ -629,7 +629,6 @@ int mdp3_get_mdp_dsi_clk(void)
 	int rc;
 
 	mutex_lock(&mdp3_res->res_mutex);
-	clk_prepare(mdp3_res->clocks[MDP3_CLK_DSI]);
 	rc = mdp3_clk_update(MDP3_CLK_DSI, 1);
 	mutex_unlock(&mdp3_res->res_mutex);
 	return rc;
@@ -1823,7 +1822,8 @@ static int mdp3_is_display_on(struct mdss_panel_data *pdata)
 static int mdp3_continuous_splash_on(struct mdss_panel_data *pdata)
 {
 	struct mdss_panel_info *panel_info = &pdata->panel_info;
-	int ab, ib, rc;
+	u64 ab, ib;
+	int rc;
 
 	pr_debug("mdp3__continuous_splash_on\n");
 
