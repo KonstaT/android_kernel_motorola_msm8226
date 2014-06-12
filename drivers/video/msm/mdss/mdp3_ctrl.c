@@ -197,7 +197,7 @@ static ssize_t mdp3_vsync_show_event(struct device *dev,
 	vsync_ticks = ktime_to_ns(mdp3_session->vsync_time);
 
 	pr_debug("fb%d vsync=%llu", mfd->index, vsync_ticks);
-	rc = scnprintf(buf, PAGE_SIZE, "VSYNC=%llu", vsync_ticks);
+	rc = scnprintf(buf, PAGE_SIZE, "VSYNC=%llu\n", vsync_ticks);
 	return rc;
 }
 
@@ -217,8 +217,8 @@ static int mdp3_ctrl_res_req_bus(struct msm_fb_data_type *mfd, int status)
 	int rc = 0;
 	if (status) {
 		struct mdss_panel_info *panel_info = mfd->panel_info;
-		int ab = 0;
-		int ib = 0;
+		u64 ab = 0;
+		u64 ib = 0;
 		ab = panel_info->xres * panel_info->yres * 4;
 		ab *= panel_info->mipi.frame_rate;
 		ib = (ab * 3) / 2;
@@ -524,6 +524,9 @@ static int mdp3_ctrl_off(struct msm_fb_data_type *mfd)
 	panel = mdp3_session->panel;
 	mutex_lock(&mdp3_session->lock);
 
+	if (panel && panel->set_backlight)
+		panel->set_backlight(panel, 0);
+
 	if (!mdp3_session->status) {
 		pr_debug("fb%d is off already", mfd->index);
 		goto off_error;
@@ -656,15 +659,15 @@ static int mdp3_ctrl_reset(struct msm_fb_data_type *mfd)
 	if (panel && panel->set_backlight)
 		panel->set_backlight(panel, 0);
 
+	rc = panel->event_handler(panel, MDSS_EVENT_PANEL_OFF, NULL);
+	if (rc)
+		pr_err("fail to turn off panel\n");
+
 	rc = mdp3_dma->stop(mdp3_dma, mdp3_session->intf);
 	if (rc) {
 		pr_err("fail to stop the MDP3 dma\n");
 		goto reset_error;
 	}
-
-	rc = panel->event_handler(panel, MDSS_EVENT_PANEL_OFF, NULL);
-	if (rc)
-		pr_err("fail to turn off panel\n");
 
 	rc = mdp3_put_mdp_dsi_clk();
 	if (rc) {

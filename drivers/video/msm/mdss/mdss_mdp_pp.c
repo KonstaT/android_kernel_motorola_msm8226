@@ -1521,6 +1521,8 @@ int mdss_mdp_pp_init(struct device *dev)
 					&mdss_pp_res->dspp_hist[i].hist_mutex);
 				spin_lock_init(
 					&mdss_pp_res->dspp_hist[i].hist_lock);
+				init_completion(
+					&mdss_pp_res->dspp_hist[i].comp);
 			}
 		}
 	}
@@ -1529,6 +1531,7 @@ int mdss_mdp_pp_init(struct device *dev)
 		for (i = 0; i < mdata->nvig_pipes; i++) {
 			mutex_init(&vig[i].pp_res.hist.hist_mutex);
 			spin_lock_init(&vig[i].pp_res.hist.hist_lock);
+			init_completion(&vig[i].pp_res.hist.comp);
 		}
 		if (!mdata->pp_bus_hdl) {
 			pp_bus_pdata = &mdp_pp_bus_scale_table;
@@ -2086,6 +2089,12 @@ int mdss_mdp_argc_config(struct mdp_pgc_lut_data *config,
 	mutex_lock(&mdss_pp_mutex);
 
 	disp_num = PP_BLOCK(config->block) - MDP_LOGICAL_BLOCK_DISP_0;
+	ret = pp_get_dspp_num(disp_num, &dspp_num);
+	if (ret) {
+		pr_err("%s, no dspp connects to disp %d", __func__, disp_num);
+		goto argc_config_exit;
+	}
+
 	switch (PP_LOCAT(config->block)) {
 	case MDSS_PP_LM_CFG:
 		argc_offset = MDSS_MDP_REG_LM_OFFSET(dspp_num) +
@@ -2109,12 +2118,6 @@ int mdss_mdp_argc_config(struct mdp_pgc_lut_data *config,
 	tbl_size = GC_LUT_SEGMENTS * sizeof(struct mdp_ar_gc_lut_data);
 
 	if (config->flags & MDP_PP_OPS_READ) {
-		ret = pp_get_dspp_num(disp_num, &dspp_num);
-		if (ret) {
-			pr_err("%s, no dspp connects to disp %d",
-				__func__, disp_num);
-			goto argc_config_exit;
-		}
 		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
 		local_cfg = *config;
 		local_cfg.r_data =
@@ -2451,7 +2454,7 @@ static int pp_histogram_enable(struct pp_hist_col_info *hist_info,
 		goto exit;
 	}
 	hist_info->frame_cnt = req->frame_cnt;
-	init_completion(&hist_info->comp);
+	INIT_COMPLETION(hist_info->comp);
 	hist_info->hist_cnt_read = 0;
 	hist_info->hist_cnt_sent = 0;
 	hist_info->hist_cnt_time = 0;
