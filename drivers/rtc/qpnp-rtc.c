@@ -393,6 +393,7 @@ qpnp_rtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
 	unsigned long irq_flags;
 	struct qpnp_rtc *rtc_dd = dev_get_drvdata(dev);
 	u8 ctrl_reg;
+	u8 value[4] = {0};
 
 	spin_lock_irqsave(&rtc_dd->alarm_ctrl_lock, irq_flags);
 	ctrl_reg = rtc_dd->alarm_ctrl_reg1;
@@ -407,6 +408,15 @@ qpnp_rtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
 	}
 
 	rtc_dd->alarm_ctrl_reg1 = ctrl_reg;
+
+	/* Clear Alarm register */
+	if (!enabled) {
+		rc = qpnp_write_wrapper(rtc_dd, value,
+			rtc_dd->alarm_base + REG_OFFSET_ALARM_RW,
+			NUM_8_BIT_RTC_REGS);
+		if (rc)
+			dev_err(dev, "Clear ALARM value reg failed\n");
+	}
 
 rtc_rw_fail:
 	spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
@@ -576,8 +586,15 @@ static int __devinit qpnp_rtc_probe(struct spmi_device *spmi)
 		goto fail_rtc_enable;
 	}
 
+	rc = qpnp_read_wrapper(rtc_dd, &rtc_dd->alarm_ctrl_reg1,
+				rtc_dd->alarm_base + REG_OFFSET_ALARM_CTRL1, 1);
+	if (rc) {
+		dev_err(&spmi->dev,
+			"Read from  Alarm control reg failed\n");
+		goto fail_rtc_enable;
+	}
 	/* Enable abort enable feature */
-	rtc_dd->alarm_ctrl_reg1 = BIT_RTC_ABORT_ENABLE;
+	rtc_dd->alarm_ctrl_reg1 |= BIT_RTC_ABORT_ENABLE;
 	rc = qpnp_write_wrapper(rtc_dd, &rtc_dd->alarm_ctrl_reg1,
 			rtc_dd->alarm_base + REG_OFFSET_ALARM_CTRL1, 1);
 	if (rc) {

@@ -223,6 +223,9 @@ void cfg80211_conn_work(struct work_struct *work)
 	mutex_lock(&rdev->devlist_mtx);
 
 	list_for_each_entry(wdev, &rdev->netdev_list, list) {
+		if (!wdev->netdev)
+			continue;
+
 		wdev_lock(wdev);
 		if (!netif_running(wdev->netdev)) {
 			wdev_unlock(wdev);
@@ -720,6 +723,10 @@ void __cfg80211_disconnected(struct net_device *dev, const u8 *ie,
 	if (rdev->ops->del_key)
 		for (i = 0; i < 6; i++)
 			rdev->ops->del_key(wdev->wiphy, dev, i, false, NULL);
+
+	if (rdev->ops->set_qos_map) {
+		rdev->ops->set_qos_map(&rdev->wiphy, dev, NULL);
+	}
 
 #ifdef CONFIG_CFG80211_WEXT
 	memset(&wrqu, 0, sizeof(wrqu));

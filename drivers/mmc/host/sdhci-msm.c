@@ -2745,7 +2745,7 @@ static int __devinit sdhci_msm_probe(struct platform_device *pdev)
 	 * max. 1ms for reset completion.
 	 */
 	ret = readl_poll_timeout(msm_host->core_mem + CORE_POWER,
-			pwr, !(pwr & CORE_SW_RST), 100, 10);
+			pwr, !(pwr & CORE_SW_RST), 10, 1000);
 
 	if (ret) {
 		dev_err(&pdev->dev, "reset failed (%d)\n", ret);
@@ -2814,6 +2814,8 @@ static int __devinit sdhci_msm_probe(struct platform_device *pdev)
 		 */
 		host->quirks2 |= SDHCI_QUIRK2_RDWR_TX_ACTIVE_EOT;
 	}
+
+	host->quirks2 |= SDHCI_QUIRK2_IGN_DATA_END_BIT_ERROR;
 
 	/* Setup PWRCTL irq */
 	msm_host->pwr_irq = platform_get_irq_byname(pdev, "pwr_irq");
