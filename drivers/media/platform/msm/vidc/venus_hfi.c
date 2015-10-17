@@ -3781,29 +3781,6 @@ int venus_hfi_get_core_capabilities(void)
 	return rc;
 }
 
-int venus_hfi_capability_check(u32 fourcc, u32 width,
-				u32 *max_width, u32 *max_height)
-{
-	int rc = 0;
-	if (!max_width || !max_height) {
-		dprintk(VIDC_ERR, "%s - invalid parameter\n", __func__);
-		return -EINVAL;
-	}
-
-	if (msm_vp8_low_tier && fourcc == V4L2_PIX_FMT_VP8) {
-		*max_width = DEFAULT_WIDTH;
-		*max_height = DEFAULT_HEIGHT;
-	}
-
-	if (width > *max_width) {
-		dprintk(VIDC_ERR,
-			"Unsupported width = %u supported max width = %u\n",
-			width, *max_width);
-		rc = -ENOTSUPP;
-	}
-	return rc;
-}
-
 static void *venus_hfi_add_device(u32 device_id,
 			struct msm_vidc_platform_resources *res,
 			hfi_cmd_response_callback callback)
